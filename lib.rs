@@ -4,12 +4,14 @@
 mod mapping{
     use ink::{
         prelude::{
-            string::String, vec::Vec
-        }, primitives::AccountId, storage::Mapping
+            string::String, vec::Vec,
+        },
+        storage::Mapping,
     };
 
     #[derive(Debug,PartialEq)]
     #[ink::scale_derive(Decode, Encode, TypeInfo)]
+    #[allow(clippy::cast_possible_truncation)]
     pub enum ContractError {
         ValueTooLarge,
     }
@@ -18,8 +20,8 @@ mod mapping{
     #[ink(storage)]
     #[derive(Default)]
     pub struct Mappings {
-        balances : Mappping<AccountId, Balance>,
-        names: Mapping<Acccount, Vec<String>>
+        balances : Mapping<AccountId, Balance>,
+        names: Mapping<AccountId, Vec<String>>
     }
 
     impl Mappings {
@@ -28,13 +30,13 @@ mod mapping{
         #[ink(constructor)]
         pub fn new() -> Self {
             let balances = Mapping::default();
-            let names = Mappping::default();
+            let names = Mapping::default();
             Self {balances, names}
         }
 
         //demonstate the usage of Mapping::get()
         //returns the balance of a acount if the acconnt is not in the Mapping
-        pub fn get_balance(&self) -> Option<u32> {
+        pub fn get_balance(&self) -> Option<Balance> {
             let  caller = Self::env().caller();
             self.balances.get(caller)
         }
@@ -54,7 +56,7 @@ mod mapping{
         //Returns the size of pre existing balance at the specified key if
         #[ink(message)]
         pub fn size_balance(&mut self) -> Option<u32>{
-            let caller = Self::env().caler();
+            let caller = Self::env().caller();
             self.balances.size(caller)
         }
 
@@ -69,9 +71,9 @@ mod mapping{
         //demonstate the usage of the Mappping::remove()
         //removes the balance entry for given account
         #[ink(message)]
-        pub fn remove_balance(&mut self) -> Option<Balance>{
+        pub fn remove_balance(&mut self) {
             let caller = Self::env().caller();
-            self.balances.remove(caller)
+            self.balances.remove(caller);
         }
 
         //demonstrate the usage of the  Mapping::take()
@@ -80,7 +82,7 @@ mod mapping{
         #[ink(message)]
         pub fn take_balance(&mut self) -> Option<Balance> {
             let caller = Self::env().caller();
-            self.balances.take(caller);
+            self.balances.take(caller)
         }
 
         //demonstrate the usage of the Mapping::try_take() and Mapping::try_insert()
@@ -91,7 +93,7 @@ mod mapping{
         #[ink(message)]
         pub fn tye_inset_name(&mut self, name: String) -> Result<(), ContractError>{
             let caller = Self::env().caller();
-            let mut names = match self.try_take(caller){
+            let mut names = match self.names.try_take(caller){
                 None => Vec::new(),
                 Some(value) => value.map_err(|_| ContractError::ValueTooLarge)?,
             };
@@ -111,11 +113,11 @@ mod mapping{
         //returns Ok(Some(_)) if the account already in the mapping
         //returns Err(_) if the Mapppig value couldn't be encoded
         #[ink(message)]
-        pub fn try_get_names(&mut self) -> Options<Result<Vec<String>, ContractError>> {
+        pub fn try_get_names(&mut self) -> Option<Result<Vec<String>, ContractError>> {
             let caller = Self::env().caller();
             self.names
                 .try_get(caller)
-                .map(|result| result.map(|_| ContractError::ValueTooLarge))
+                .map(|result| result.map_err(|_| ContractError::ValueTooLarge))
         }
     }
 }
